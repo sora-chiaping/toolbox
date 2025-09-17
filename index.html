@@ -28,7 +28,7 @@
 </head>
 <body>
   <header>
-    <h1>📦 我的小工具</h1>
+    <h1>📦 我的工具</h1>
     <div class="tabs">
       <button class="tab-btn active" data-target="p1">箱麥產生器</button>
       <button class="tab-btn" data-target="p2">海運暫估工具</button>
@@ -38,20 +38,18 @@
   <div class="wrap">
     <!-- Panel 1: 箱麥產生器 -->
     <section id="p1" class="panel active">
-      <iframe class="frame" src="箱麥產生器.html" title="箱麥產生器"></iframe>
+      <iframe class="frame" src="box-label.html" title="箱麥產生器"></iframe>
       <div class="links">
-        直接開新頁：<a href="箱麥產生器.html" target="_blank" rel="noopener">箱麥產生器.html</a>
+        直接開新頁：<a href="box-label.html" target="_blank" rel="noopener">box-label.html</a>
       </div>
     </section>
 
     <!-- Panel 2: 海運暫估工具 -->
     <section id="p2" class="panel">
-      <iframe class="frame" src="海運暫估工具_LCL_FCL__一體版_簡簡介面.html" title="海運暫估工具"></iframe>
+      <iframe class="frame" src="shipping-estimator.html" title="海運暫估工具"></iframe>
       <div class="links">
         直接開新頁：
-        <a href="海運暫估工具_LCL_FCL__一體版_簡簡介面.html" target="_blank" rel="noopener">
-          海運暫估工具_LCL_FCL__一體版_簡簡介面.html
-        </a>
+        <a href="shipping-estimator.html" target="_blank" rel="noopener">shipping-estimator.html</a>
       </div>
     </section>
   </div>
@@ -65,7 +63,6 @@
         panels.forEach(p=>p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(btn.dataset.target).classList.add('active');
-        // 捲回到頂，避免切換後在下方
         window.scrollTo({top:0, behavior:'smooth'});
       });
     });
