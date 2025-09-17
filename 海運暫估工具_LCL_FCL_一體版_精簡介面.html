@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>海運暫估工具（LCL+FCL 一體版｜精簡介面）</title>
+  <style>
+    :root{--bg:#0f172a;--card:#111827;--ink:#e5e7eb;--muted:#9ca3af;--line:#334155;--accent:#22d3ee}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Arial}
+    .wrap{max-width:780px;margin:32px auto;padding:20px}
+    .card{background:var(--card);border:1px solid #0b1220;border-radius:16px;box-shadow:0 10px 28px #0007;padding:20px}
+    h1{margin:0 0 6px;font-size:22px}
+    p{color:var(--muted);font-size:14px;margin:0 0 12px}
+    label{display:block;font-size:13px;color:var(--muted);margin:8px 0 6px}
+    input,select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--ink);font-size:16px}
+    input:focus,select:focus{outline:2px solid var(--accent)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .amount{display:none;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    .box{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:14px}
+    .title{font-size:12px;color:var(--muted)}
+    .amt{font-size:26px;font-weight:800;margin-top:6px}
+    .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .btn{margin-top:10px;background:linear-gradient(135deg,#06b6d4,#22d3ee);color:#06202a;border:none;padding:11px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    details{margin-top:18px;border-top:1px dashed #243244;padding-top:12px}
+    details summary{cursor:pointer;color:#a5b4fc}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:12px;color:#a1a1aa}
+    .badge{display:inline-block;background:#0b1220;border:1px solid var(--line);padding:4px 8px;border-radius:999px;font-size:12px;color:#cbd5e1;margin-left:6px}
+    .ok{display:inline-block;background:#10b98122;border:1px solid #065f46;color:#a7f3d0;padding:4px 8px;border-radius:8px;font-size:12px;margin-left:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>海運暫估工具（LCL+FCL 一體版｜精簡）</h1>
+      <p>輸入最少欄位就能估：LCL 只需 <b>CBM</b>；FCL 只選 <b>櫃型</b>。港口可從清單選或自行新增。</p>
+
+      <div class="grid">
+        <div>
+          <label for="type">運送型態</label>
+          <select id="type">
+            <option value="LCL" selected>LCL（散貨）</option>
+            <option value="20GP">FCL：20'GP</option>
+            <option value="40GP">FCL：40'GP</option>
+            <option value="40HQ">FCL：40'HQ</option>
+          </select>
+        </div>
+        <div>
+          <label for="port">起運港口</label>
+          <select id="port"></select>
+          <div class="small">沒有的港口 → 下方「新增港口」加入即可</div>
+        </div>
+      </div>
+
+      <div id="lclInputs" class="grid" style="margin-top:12px">
+        <div>
+          <label for="cbm">CBM（僅 LCL 需要）</label>
+          <input id="cbm" type="number" step="0.01" placeholder="例如 7.802 / 11.49">
+        </div>
+        <div>
+          <label for="buffer">保守緩衝（LCL）</label>
+          <select id="buffer">
+            <option value="0">無</option>
+            <option value="3000" selected>+3,000</option>
+            <option value="5000">+5,000</option>
+            <option value="10000">+10,000（高風險）</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="amount" class="amount">
+        <div class="box">
+          <div class="title" id="stdTitle">標準估</div>
+          <div class="amt" id="std">—</div>
+        </div>
+        <div class="box">
+          <div class="title" id="consTitle">保守估</div>
+          <div class="amt" id="cons">—</div>
+        </div>
+      </div>
+
+      <button class="btn" id="copy">複製估算</button>
+
+      <details>
+        <summary>如何使用</summary>
+        <div class="muted" style="margin-top:8px;line-height:1.7">
+          <b>LCL：</b>輸入 CBM → 選港口 → （可選）保守緩衝。系統會顯示「標準估」與「保守估」。<br>
+          <b>FCL：</b>選櫃型與港口即可，系統會顯示「基準區間（不含雜支）」與「含雜支區間」。<br>
+          <span class="badge">提示</span> 若無法判斷是否會出現雜支，建議使用保守估或選擇較大的緩衝。
+        </div>
+      </details>
+
+      <details>
+        <summary>LCL 的三種保守緩衝怎麼選？</summary>
+        <div class="muted" style="margin-top:8px;line-height:1.8">
+          <b>+3,000：</b>常規情境（深圳/廣州/香港，非旺季），當作安全邊際。<br>
+          <b>+5,000：</b>旺季、卡車距離較長、或你希望預提再保守一點。<br>
+          <b>+10,000：</b>高風險港口（如天津/寧波），或可能有進倉/打托/港雜/抽驗等情況。<br>
+          <span class="ok">目標</span> 多數票落在標準估 ±3,000；不確定時改用保守緩衝避免低估。
+        </div>
+      </details>
+
+      <details>
+        <summary>新增港口</summary>
+        <div class="muted" style="margin-top:8px">
+          若你的港口不在清單，可在這裡加入並設定風險附加（估算時會自動加總）。資料會保存在你的瀏覽器。
+          <div class="row" style="margin-top:8px">
+            <div>
+              <label for="newPortCode">港口代碼/名稱</label>
+              <input id="newPortCode" placeholder="例如 SZX / 深圳">
+            </div>
+            <div>
+              <label for="newRisk">風險附加（TWD）</label>
+              <input id="newRisk" type="number" step="100" placeholder="例如 0 / 4000 / 10000">
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button class="btn" id="addPort">加入港口</button>
+            </div>
+          </div>
+          <div class="small" id="saveMsg"></div>
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <script>
+    const nf = new Intl.NumberFormat('zh-Hant-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0});
+    const $ = (id)=>document.getElementById(id);
+
+    // --- Port list with localStorage persistence ---
+    const DEFAULT_PORTS = [
+      {id:"SZX", name:"深圳 / SZX", risk:0},
+      {id:"GZ", name:"廣州 / GZ", risk:0},
+      {id:"HK", name:"香港 / HK", risk:0},
+      {id:"XINGANG", name:"天津 / XINGANG", risk:10000},
+      {id:"NGB", name:"寧波 / NGB", risk:10000},
+      {id:"OTHER", name:"其他 / OTHER", risk:4000}
+    ];
+
+    function loadPorts(){
+      try{
+        const saved = JSON.parse(localStorage.getItem("portList")||"[]");
+        return [...DEFAULT_PORTS, ...saved];
+      }catch(e){ return DEFAULT_PORTS.slice(); }
+    }
+    function saveCustomPort(p){
+      const saved = JSON.parse(localStorage.getItem("portList")||"[]");
+      saved.push(p);
+      localStorage.setItem("portList", JSON.stringify(saved));
+    }
+    function renderPortOptions(){
+      const ports = loadPorts();
+      const sel = $("port");
+      sel.innerHTML = "";
+      ports.forEach(p=>{
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.name;
+        opt.dataset.risk = p.risk;
+        sel.appendChild(opt);
+      });
+      sel.selectedIndex = 0;
+    }
+    function getPortRisk(){
+      const sel = $("port");
+      const opt = sel.options[sel.selectedIndex];
+      return parseFloat(opt.dataset.risk||"0");
+    }
+
+    // --- Estimation models (same as previous tuned rules) ---
+    function lclBase(cbm){
+      if(cbm < 1) return 9000;
+      if(cbm < 1.5) return 12000 + 5000*cbm;
+      if(cbm < 3) return 6000 + 3000*cbm;
+      if(cbm < 6) return 2500 + 2200*cbm + 4200;
+      if(cbm < 9) return 2200*cbm + 4200;
+      if(cbm < 12) return 500 + 3300*cbm + 4800;
+      return 3600*cbm + 4800;
+    }
+    function fclBase(type){
+      if(type==="20GP") return [25000,35000];
+      if(type==="40GP") return [32000,42000];
+      if(type==="40HQ") return [36000,45000];
+      return [0,0];
+    }
+
+    function calc(){
+      const type = $("type").value;
+      const risk = getPortRisk();
+
+      if(type === "LCL"){
+        $("lclInputs").style.display = "grid";
+        $("stdTitle").textContent="標準估（LCL）";
+        $("consTitle").textContent="保守估（LCL）";
+
+        const cbm = parseFloat($("cbm").value);
+        if(isNaN(cbm) || cbm <= 0){ $("amount").style.display="none"; return; }
+        let std = Math.round(lclBase(cbm) + risk);
+        const buf = parseFloat($("buffer").value)||0;
+        let cons = std + buf;
+        $("std").textContent = nf.format(std);
+        $("cons").textContent = nf.format(cons);
+        $("amount").style.display = "grid";
+      }else{
+        $("lclInputs").style.display = "none";
+        $("stdTitle").textContent="基準區間（FCL 不含雜支）";
+        $("consTitle").textContent="含雜支區間（+5K～10K）";
+
+        let [lo,hi] = fclBase(type);
+        lo += risk; hi += risk;
+        $("std").textContent = `${nf.format(lo)} ～ ${nf.format(hi)}`;
+        $("cons").textContent = `${nf.format(lo+5000)} ～ ${nf.format(hi+10000)}`;
+        $("amount").style.display = "grid";
+      }
+    }
+
+    // Events
+    ["type","port","cbm","buffer"].forEach(id=>{
+      const el = $(id); if(el) el.addEventListener('input', calc);
+    });
+    document.getElementById('copy').addEventListener('click', ()=>{
+      const type = $("type").value;
+      const sel = $("port");
+      const portName = sel.options[sel.selectedIndex].textContent;
+      let txt = `型態：${type}\n港口：${portName}\n`;
+      if(type==="LCL"){
+        txt += `CBM：${$("cbm").value||'-'}\n標準估：${$("std").textContent}\n保守估：${$("cons").textContent}`;
+      }else{
+        txt += `基準估：${$("std").textContent}\n含雜支估：${$("cons").textContent}`;
+      }
+      navigator.clipboard.writeText(txt);
+    });
+
+    // Add custom port
+    $("addPort").addEventListener('click', ()=>{
+      const id = $("newPortCode").value.trim();
+      const risk = parseFloat($("newRisk").value||"0");
+      if(!id){ $("saveMsg").textContent="請輸入港口代碼或名稱"; return; }
+      saveCustomPort({id, name:id, risk:isNaN(risk)?0:risk});
+      renderPortOptions();
+      $("saveMsg").textContent = `已加入：${id}（風險附加 ${isNaN(risk)?0:risk}）`;
+      $("newPortCode").value=""; $("newRisk").value="";
+    });
+
+    // init
+    renderPortOptions();
+    calc();
+  </script>
+</body>
+</html>
