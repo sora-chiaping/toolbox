@@ -4,40 +4,172 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>海運暫估工具（LCL+FCL 一體版｜精簡介面）</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    :root{--bg:#0f172a;--card:#111827;--ink:#e5e7eb;--muted:#9ca3af;--line:#334155;--accent:#22d3ee}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Arial}
-    .wrap{max-width:780px;margin:32px auto;padding:20px}
-    .card{background:var(--card);border:1px solid #0b1220;border-radius:16px;box-shadow:0 10px 28px #0007;padding:20px}
-    h1{margin:0 0 6px;font-size:22px}
-    p{color:var(--muted);font-size:14px;margin:0 0 12px}
-    label{display:block;font-size:13px;color:var(--muted);margin:8px 0 6px}
-    input,select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--ink);font-size:16px}
-    input:focus,select:focus{outline:2px solid var(--accent)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .amount{display:none;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
-    .box{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:14px}
-    .title{font-size:12px;color:var(--muted)}
-    .amt{font-size:26px;font-weight:800;margin-top:6px}
-    .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-    .btn{margin-top:10px;background:linear-gradient(135deg,#06b6d4,#22d3ee);color:#06202a;border:none;padding:11px 14px;border-radius:10px;font-weight:700;cursor:pointer}
-    details{margin-top:18px;border-top:1px dashed #243244;padding-top:12px}
-    details summary{cursor:pointer;color:#a5b4fc}
-    .muted{color:var(--muted);font-size:13px}
-    .small{font-size:12px;color:#a1a1aa}
-    .badge{display:inline-block;background:#0b1220;border:1px solid var(--line);padding:4px 8px;border-radius:999px;font-size:12px;color:#cbd5e1;margin-left:6px}
-    .ok{display:inline-block;background:#10b98122;border:1px solid #065f46;color:#a7f3d0;padding:4px 8px;border-radius:8px;font-size:12px;margin-left:8px}
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+    .container {
+      max-width: 780px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #555;
+      margin: 0 0 10px 0;
+      font-size: 24px;
+    }
+    p {
+      color: #666;
+      font-size: 14px;
+      margin: 0 0 20px 0;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+      font-size: 14px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 16px;
+      background-color: #fff;
+      color: #333;
+    }
+    input:focus, select:focus {
+      outline: 2px solid #007BFF;
+      border-color: #007BFF;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .amount {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .box {
+      background-color: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+    }
+    .title {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .amt {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 15px;
+    }
+    .btn {
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 15px;
+      width: 100%;
+    }
+    .btn:hover {
+      background-color: #0056b3;
+    }
+    details {
+      margin-top: 20px;
+      border-top: 1px solid #ddd;
+      padding-top: 15px;
+    }
+    details summary {
+      cursor: pointer;
+      color: #007BFF;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .muted {
+      color: #666;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .small {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: #e8f4fd;
+      border: 1px solid #b3d9ff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #0066cc;
+      margin-left: 6px;
+    }
+    .ok {
+      display: inline-block;
+      background-color: #e6ffe6;
+      border: 1px solid #ccffcc;
+      color: #006600;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    .success-message {
+      color: #006600;
+      background-color: #e6ffe6;
+      border: 1px solid #ccffcc;
+      border-radius: 4px;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .error-message {
+      color: #ff0000;
+      background-color: #ffe6e6;
+      border: 1px solid #ffcccc;
+      border-radius: 4px;
+      padding: 10px;
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
+  <div class="container">
       <h1>海運暫估工具（LCL+FCL 一體版｜精簡）</h1>
       <p>輸入最少欄位就能估：LCL 只需 <b>CBM</b>；FCL 只選 <b>櫃型</b>。港口可從清單選或自行新增。</p>
 
       <div class="grid">
-        <div>
+        <div class="form-group">
           <label for="type">運送型態</label>
           <select id="type">
             <option value="LCL" selected>LCL（散貨）</option>
@@ -46,19 +178,19 @@
             <option value="40HQ">FCL：40'HQ</option>
           </select>
         </div>
-        <div>
+        <div class="form-group">
           <label for="port">起運港口</label>
           <select id="port"></select>
           <div class="small">沒有的港口 → 下方「新增港口」加入即可</div>
         </div>
       </div>
 
-      <div id="lclInputs" class="grid" style="margin-top:12px">
-        <div>
+      <div id="lclInputs" class="grid" style="margin-top:20px">
+        <div class="form-group">
           <label for="cbm">CBM（僅 LCL 需要）</label>
           <input id="cbm" type="number" step="0.01" placeholder="例如 7.802 / 11.49">
         </div>
-        <div>
+        <div class="form-group">
           <label for="buffer">保守緩衝（LCL）</label>
           <select id="buffer">
             <option value="0">無</option>
@@ -105,16 +237,16 @@
         <summary>新增港口</summary>
         <div class="muted" style="margin-top:8px">
           若你的港口不在清單，可在這裡加入並設定風險附加（估算時會自動加總）。資料會保存在你的瀏覽器。
-          <div class="row" style="margin-top:8px">
-            <div>
+          <div class="row" style="margin-top:15px">
+            <div class="form-group">
               <label for="newPortCode">港口代碼/名稱</label>
               <input id="newPortCode" placeholder="例如 SZX / 深圳">
             </div>
-            <div>
+            <div class="form-group">
               <label for="newRisk">風險附加（TWD）</label>
               <input id="newRisk" type="number" step="100" placeholder="例如 0 / 4000 / 10000">
             </div>
-            <div style="display:flex;align-items:flex-end">
+            <div class="form-group" style="display:flex;align-items:flex-end">
               <button class="btn" id="addPort">加入港口</button>
             </div>
           </div>
@@ -122,7 +254,41 @@
         </div>
       </details>
 
-    </div>
+      <details>
+        <summary>運費資料管理</summary>
+        <div class="muted" style="margin-top:8px">
+          上傳最新的海運運費資料來提高估算準確性。支援 Excel (.xlsx) 和 CSV 格式。
+          <div style="margin-top:15px">
+            <div class="form-group">
+              <label for="freightFileInput">上傳運費資料檔案</label>
+              <input type="file" id="freightFileInput" accept=".xlsx,.xls,.csv" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+              <button onclick="downloadFreightTemplate()" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px;">下載範本檔案</button>
+            </div>
+            
+            <div class="form-group">
+              <label>範本格式說明：</label>
+              <div class="small" style="margin-top:5px; line-height: 1.6;">
+                <strong>LCL 資料格式：</strong> 港口代碼, CBM範圍, 基準價格, 備註<br>
+                <strong>FCL 資料格式：</strong> 港口代碼, 櫃型, 最低價格, 最高價格, 備註<br>
+                範例：<br>
+                SZX, 1-3, 15000, 標準LCL<br>
+                SZX, 20GP, 25000, 35000, 標準FCL
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <button class="btn" id="uploadFreightData" style="background-color: #17a2b8; margin-top: 10px;">上傳並更新運費資料</button>
+            </div>
+            
+            <div id="freightUploadMsg" class="small" style="margin-top:10px;"></div>
+            
+            <div style="margin-top:15px; padding:10px; background-color: #f8f9fa; border-radius: 4px;">
+              <strong>目前載入的運費資料：</strong>
+              <div id="currentFreightData" class="small" style="margin-top:5px;"></div>
+            </div>
+          </div>
+        </div>
+      </details>
   </div>
 
   <script>
@@ -138,6 +304,57 @@
       {id:"NGB", name:"寧波 / NGB", risk:10000},
       {id:"OTHER", name:"其他 / OTHER", risk:4000}
     ];
+
+    // --- Freight data management ---
+    let customFreightData = {
+      lcl: [], // {port, cbmRange, basePrice, note}
+      fcl: []  // {port, containerType, minPrice, maxPrice, note}
+    };
+
+    function loadFreightData() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("customFreightData") || "{}");
+        customFreightData = {
+          lcl: saved.lcl || [],
+          fcl: saved.fcl || []
+        };
+        updateFreightDataDisplay();
+      } catch(e) {
+        console.error("載入運費資料失敗:", e);
+      }
+    }
+
+    function saveFreightData() {
+      try {
+        localStorage.setItem("customFreightData", JSON.stringify(customFreightData));
+        updateFreightDataDisplay();
+      } catch(e) {
+        console.error("儲存運費資料失敗:", e);
+      }
+    }
+
+    function updateFreightDataDisplay() {
+      const display = document.getElementById('currentFreightData');
+      if (!display) return;
+      
+      let html = '';
+      if (customFreightData.lcl.length > 0) {
+        html += '<strong>LCL 資料：</strong><br>';
+        customFreightData.lcl.forEach(item => {
+          html += `• ${item.port} - ${item.cbmRange} CBM: ${nf.format(item.basePrice)}<br>`;
+        });
+      }
+      if (customFreightData.fcl.length > 0) {
+        html += '<strong>FCL 資料：</strong><br>';
+        customFreightData.fcl.forEach(item => {
+          html += `• ${item.port} - ${item.containerType}: ${nf.format(item.minPrice)} ~ ${nf.format(item.maxPrice)}<br>`;
+        });
+      }
+      if (html === '') {
+        html = '目前使用預設運費資料';
+      }
+      display.innerHTML = html;
+    }
 
     function loadPorts(){
       try{
@@ -169,8 +386,139 @@
       return parseFloat(opt.dataset.risk||"0");
     }
 
-    // --- Estimation models (same as previous tuned rules) ---
+    // --- File upload and template functions ---
+    function downloadFreightTemplate() {
+      const templateData = [
+        ['港口代碼', 'CBM範圍/櫃型', '基準價格/最低價格', '最高價格', '備註'],
+        ['SZX', '1-3', '15000', '', '標準LCL'],
+        ['SZX', '3-6', '12000', '', '標準LCL'],
+        ['SZX', '20GP', '25000', '35000', '標準FCL'],
+        ['SZX', '40GP', '32000', '42000', '標準FCL'],
+        ['GZ', '1-3', '14000', '', '廣州LCL'],
+        ['GZ', '20GP', '24000', '34000', '廣州FCL']
+      ];
+      
+      const ws = XLSX.utils.aoa_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '運費資料範本');
+      
+      XLSX.writeFile(wb, '海運運費資料範本.xlsx');
+      showFreightMessage('範本檔案下載完成', 'success');
+    }
+
+    function handleFreightFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = e.target.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          
+          parseFreightData(jsonData);
+        } catch (error) {
+          showFreightMessage('檔案解析失敗：' + error.message, 'error');
+        }
+      };
+      
+      if (file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsBinaryString(file);
+      }
+    }
+
+    function parseFreightData(data) {
+      const newLclData = [];
+      const newFclData = [];
+      let errorCount = 0;
+
+      // 跳過標題行
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.length < 3) continue;
+
+        const port = row[0]?.toString().trim();
+        const typeOrRange = row[1]?.toString().trim();
+        const baseOrMinPrice = parseFloat(row[2]) || 0;
+        const maxPrice = parseFloat(row[3]) || 0;
+        const note = row[4]?.toString().trim() || '';
+
+        if (!port || !typeOrRange || baseOrMinPrice <= 0) {
+          errorCount++;
+          continue;
+        }
+
+        // 判斷是 LCL 還是 FCL 資料
+        if (typeOrRange.includes('GP') || typeOrRange.includes('HQ') || typeOrRange.includes('FCL')) {
+          // FCL 資料
+          newFclData.push({
+            port: port,
+            containerType: typeOrRange,
+            minPrice: baseOrMinPrice,
+            maxPrice: maxPrice || baseOrMinPrice,
+            note: note
+          });
+        } else if (typeOrRange.includes('-') || typeOrRange.includes('CBM')) {
+          // LCL 資料
+          newLclData.push({
+            port: port,
+            cbmRange: typeOrRange,
+            basePrice: baseOrMinPrice,
+            note: note
+          });
+        } else {
+          errorCount++;
+        }
+      }
+
+      if (errorCount > 0) {
+        showFreightMessage(`成功解析 ${newLclData.length + newFclData.length} 筆資料，${errorCount} 筆格式錯誤已跳過`, 'warning');
+      } else {
+        showFreightMessage(`成功解析 ${newLclData.length + newFclData.length} 筆資料`, 'success');
+      }
+
+      // 更新資料
+      customFreightData.lcl = newLclData;
+      customFreightData.fcl = newFclData;
+      saveFreightData();
+    }
+
+    function showFreightMessage(message, type) {
+      const msgDiv = document.getElementById('freightUploadMsg');
+      if (!msgDiv) return;
+      
+      const className = type === 'error' ? 'error-message' : 
+                      type === 'warning' ? 'success-message' : 'success-message';
+      msgDiv.innerHTML = `<div class="${className}" style="margin: 0; padding: 8px;">${message}</div>`;
+      
+      setTimeout(() => {
+        msgDiv.innerHTML = '';
+      }, 5000);
+    }
+
+    // --- Enhanced estimation models with custom data ---
     function lclBase(cbm){
+      // 先檢查是否有自定義 LCL 資料
+      const port = getCurrentPort();
+      const customLcl = customFreightData.lcl.find(item => item.port === port);
+      
+      if (customLcl) {
+        // 解析 CBM 範圍並找到對應的價格
+        const range = customLcl.cbmRange;
+        if (range.includes('-')) {
+          const [min, max] = range.split('-').map(x => parseFloat(x.trim()));
+          if (cbm >= min && cbm <= max) {
+            return customLcl.basePrice;
+          }
+        }
+      }
+      
+      // 使用預設計算方式
       if(cbm < 1) return 9000;
       if(cbm < 1.5) return 12000 + 5000*cbm;
       if(cbm < 3) return 6000 + 3000*cbm;
@@ -179,11 +527,29 @@
       if(cbm < 12) return 500 + 3300*cbm + 4800;
       return 3600*cbm + 4800;
     }
+    
     function fclBase(type){
+      // 先檢查是否有自定義 FCL 資料
+      const port = getCurrentPort();
+      const customFcl = customFreightData.fcl.find(item => 
+        item.port === port && item.containerType === type
+      );
+      
+      if (customFcl) {
+        return [customFcl.minPrice, customFcl.maxPrice];
+      }
+      
+      // 使用預設計算方式
       if(type==="20GP") return [25000,35000];
       if(type==="40GP") return [32000,42000];
       if(type==="40HQ") return [36000,45000];
       return [0,0];
+    }
+
+    function getCurrentPort() {
+      const sel = document.getElementById('port');
+      const opt = sel.options[sel.selectedIndex];
+      return opt.value;
     }
 
     function calc(){
@@ -246,7 +612,19 @@
 
     // init
     renderPortOptions();
+    loadFreightData();
     calc();
+    
+    // 添加檔案上傳事件監聽器
+    document.getElementById('freightFileInput').addEventListener('change', handleFreightFileUpload);
+    document.getElementById('uploadFreightData').addEventListener('click', function() {
+      const fileInput = document.getElementById('freightFileInput');
+      if (fileInput.files.length > 0) {
+        handleFreightFileUpload({ target: fileInput });
+      } else {
+        showFreightMessage('請先選擇檔案', 'error');
+      }
+    });
   </script>
 </body>
 </html>
