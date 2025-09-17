@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>箱嘜產生工具 - 批量版</title>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -210,29 +212,40 @@
             <div class="form-group">
                 <label for="manufactureDate">製造日期：</label>
                 <input type="date" id="manufactureDate">
+                <small style="color: #666; font-size: 12px;">[如未填寫則自動預設無效期]</small>
             </div>
             
             <div class="form-group">
                 <label for="shelfLife">保存年限：</label>
                 <input type="text" id="shelfLife" placeholder="例如：2年">
+                <small style="color: #666; font-size: 12px;">[如未填寫則自動預設無效期]</small>
             </div>
             
             <div class="form-group">
                 <label for="expiryDate">有效日期：</label>
                 <input type="date" id="expiryDate">
+                <small style="color: #666; font-size: 12px;">[如未填寫則自動預設無效期]</small>
             </div>
             
             <div class="btn-group">
-                <button onclick="addToBatch()">加入批量</button>
-                <button onclick="generateSingleLabel()">產生單張</button>
+                <button onclick="addToBatch()">加入資料</button>
             </div>
         </div>
 
         <div class="batch-input">
             <div class="section-title">批量輸入</div>
+            
+            <div class="form-group">
+                <label for="fileInput">匯入檔案 (Excel/CSV)：</label>
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                <button onclick="downloadSampleFile()" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px;">下載範例檔案</button>
+            </div>
+            
             <div class="batch-info">
                 <strong>使用說明：</strong><br>
-                每行一筆資料，格式：品名,貨號,數量,製造日期,保存年限,有效日期<br>
+                1. 點擊「下載範例檔案」下載範本<br>
+                2. 填寫範本後上傳，或直接在此輸入資料<br>
+                3. 手動輸入格式：品名,貨號,數量,製造日期,保存年限,有效日期<br>
                 日期格式：YYYY-MM-DD 或留空<br>
                 例如：<br>
                 藍牙耳機,TWS-PRO-123,100,2024-01-01,2年,2026-01-01<br>
@@ -259,7 +272,7 @@
 
     <div class="btn-group">
         <button onclick="generateAllLabels()" id="generateAllBtn" disabled>產生所有箱嘜</button>
-        <button onclick="downloadAllImages()" id="downloadAllBtn" disabled>下載所有圖片</button>
+        <button onclick="downloadAllAsPDF()" id="downloadAllBtn" disabled>下載PDF</button>
         <button onclick="printAllLabels()" id="printAllBtn" disabled>列印所有箱嘜</button>
     </div>
 
@@ -274,6 +287,12 @@
 
 <script>
 let batchData = [];
+
+// 檔案上傳事件監聽器
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', handleFileUpload);
+});
 
 function addToBatch() {
     const productName = document.getElementById('productName').value.trim();
@@ -299,7 +318,10 @@ function addToBatch() {
     batchData.push(newItem);
     updateBatchList();
     clearSingleInput();
-    showMessage(`已加入批量：${productName}`, 'success');
+    
+    // 立即產生單張箱嘜
+    generateLabels([newItem]);
+    showMessage(`已加入並產生箱嘜：${productName}`, 'success');
 }
 
 function parseBatchData() {
@@ -482,43 +504,6 @@ function generateLabels(items) {
     showMessage(`已產生 ${items.length} 張箱嘜`, 'success');
 }
 
-function downloadAllImages() {
-    if (batchData.length === 0) {
-        showMessage('沒有資料可下載！', 'error');
-        return;
-    }
-
-    const container = document.getElementById('labelsContainer');
-    const labels = container.querySelectorAll('.box-label-container');
-    
-    if (labels.length === 0) {
-        showMessage('請先產生箱嘜！', 'error');
-        return;
-    }
-
-    showMessage('正在生成圖片，請稍候...', 'success');
-    
-    let completed = 0;
-    labels.forEach((label, index) => {
-        html2canvas(label, { 
-            scale: 2,
-            backgroundColor: '#ffffff'
-        }).then(canvas => {
-            const imageURL = canvas.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.href = imageURL;
-            link.download = `箱嘜_${batchData[index].itemNumber}_${Date.now()}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            completed++;
-            if (completed === labels.length) {
-                showMessage(`已下載 ${completed} 張圖片`, 'success');
-            }
-        });
-    });
-}
 
 function printAllLabels() {
     if (batchData.length === 0) {
@@ -652,6 +637,107 @@ function printAllLabels() {
                     printWindow.print();
                     printWindow.close();
                 };
+            }
+        });
+    });
+}
+
+// 檔案上傳處理
+function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = e.target.result;
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            
+            // 轉換為CSV格式
+            const csvData = jsonData.map(row => row.join(',')).join('\n');
+            document.getElementById('batchData').value = csvData;
+            showMessage('檔案上傳成功，請點擊「解析資料」', 'success');
+        } catch (error) {
+            showMessage('檔案解析失敗：' + error.message, 'error');
+        }
+    };
+    
+    if (file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+    } else {
+        reader.readAsBinaryString(file);
+    }
+}
+
+// 下載範例檔案
+function downloadSampleFile() {
+    const sampleData = [
+        ['品名', '貨號', '數量', '製造日期', '保存年限', '有效日期'],
+        ['藍牙耳機', 'TWS-PRO-123', '100', '2024-01-01', '2年', '2026-01-01'],
+        ['手機殼', 'PHONE-CASE-456', '50', '', '', ''],
+        ['充電線', 'USB-CABLE-789', '200', '2024-01-01', '', '']
+    ];
+    
+    const ws = XLSX.utils.aoa_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '箱嘜資料');
+    
+    XLSX.writeFile(wb, '箱嘜範例檔案.xlsx');
+    showMessage('範例檔案下載完成', 'success');
+}
+
+// 下載所有箱嘜為PDF
+function downloadAllAsPDF() {
+    if (batchData.length === 0) {
+        showMessage('沒有資料可下載！', 'error');
+        return;
+    }
+
+    const container = document.getElementById('labelsContainer');
+    const labels = container.querySelectorAll('.box-label-container');
+    
+    if (labels.length === 0) {
+        showMessage('請先產生箱嘜！', 'error');
+        return;
+    }
+
+    showMessage('正在生成PDF，請稍候...', 'success');
+    
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    
+    let completed = 0;
+    let currentPage = 0;
+    
+    labels.forEach((label, index) => {
+        html2canvas(label, { 
+            scale: 2,
+            backgroundColor: '#ffffff'
+        }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = 100; // 10cm in mm
+            const imgHeight = 150; // 15cm in mm
+            
+            // 計算位置（每頁放一個標籤）
+            const x = (pageWidth - imgWidth) / 2;
+            const y = (pageHeight - imgHeight) / 2;
+            
+            if (currentPage > 0) {
+                pdf.addPage();
+            }
+            
+            pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+            currentPage++;
+            
+            completed++;
+            if (completed === labels.length) {
+                pdf.save('箱嘜標籤.pdf');
+                showMessage(`已下載 ${completed} 張箱嘜PDF`, 'success');
             }
         });
     });
