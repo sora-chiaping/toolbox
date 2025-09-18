@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>箱嘜產生工具 - 批量版</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>箱嘜產生工具 - 批量版 v2.0</title>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -11,7 +14,17 @@
         // 確保庫載入完成
         window.addEventListener('load', function() {
             console.log('所有庫已載入完成');
+            console.log('箱嘜產生工具 v2.0 已載入');
         });
+        
+        // 強制清除快取
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
     </script>
     <style>
         body {
@@ -195,7 +208,7 @@
 <body>
 
 <div class="container">
-    <h2>箱嘜資訊產生器 - 批量版</h2>
+    <h2>箱嘜資訊產生器 - 批量版 v2.0</h2>
 
     <div class="input-section">
         <div class="single-input">
@@ -207,7 +220,8 @@
             
             <div class="form-group">
                 <label for="itemNumber">貨號：</label>
-                <input type="text" id="itemNumber" placeholder="例如：TWS-PRO-123">
+                <input type="text" id="itemNumber" placeholder="例如：TWS-PRO-123" oninput="validateItemNumber(this)">
+                <small style="color: #666; font-size: 12px;">[不可包含底線(_)或空格]</small>
             </div>
             
             <div class="form-group">
@@ -300,6 +314,21 @@ document.addEventListener('DOMContentLoaded', function() {
     fileInput.addEventListener('change', handleFileUpload);
 });
 
+// 貨號驗證函數
+function validateItemNumber(input) {
+    const value = input.value;
+    const hasInvalidChars = value.includes('_') || value.includes(' ');
+    
+    if (hasInvalidChars) {
+        input.style.borderColor = '#ff0000';
+        input.style.backgroundColor = '#ffe6e6';
+        showMessage('貨號不可包含底線(_)或空格！', 'error');
+    } else {
+        input.style.borderColor = '#ddd';
+        input.style.backgroundColor = '#fff';
+    }
+}
+
 function addToBatch() {
     const productName = document.getElementById('productName').value.trim();
     const itemNumber = document.getElementById('itemNumber').value.trim();
@@ -310,6 +339,12 @@ function addToBatch() {
 
     if (!productName || !itemNumber || !quantity) {
         showMessage('請完整填寫品名、貨號和數量！', 'error');
+        return;
+    }
+
+    // 檢查貨號格式
+    if (itemNumber.includes('_') || itemNumber.includes(' ')) {
+        showMessage('貨號不可包含底線(_)或空格！', 'error');
         return;
     }
 
@@ -340,10 +375,17 @@ function parseBatchData() {
     const lines = batchText.split('\n');
     const newItems = [];
     let errorLines = [];
+    let isFirstLine = true;
 
     lines.forEach((line, index) => {
         const trimmedLine = line.trim();
         if (!trimmedLine) return;
+
+        // 跳過第一列標題行
+        if (isFirstLine) {
+            isFirstLine = false;
+            return;
+        }
 
         const parts = trimmedLine.split(',');
         if (parts.length < 3) {
@@ -354,6 +396,12 @@ function parseBatchData() {
         const [productName, itemNumber, quantity, manufactureDate, shelfLife, expiryDate] = parts.map(part => part.trim());
         if (!productName || !itemNumber || !quantity) {
             errorLines.push(`第${index + 1}行資料不完整：${trimmedLine}`);
+            return;
+        }
+
+        // 檢查貨號格式
+        if (itemNumber.includes('_') || itemNumber.includes(' ')) {
+            errorLines.push(`第${index + 1}行貨號格式錯誤（不可包含底線或空格）：${itemNumber}`);
             return;
         }
 
@@ -433,30 +481,6 @@ function updateButtonStates() {
     document.getElementById('printAllBtn').disabled = !hasData;
 }
 
-function generateSingleLabel() {
-    const productName = document.getElementById('productName').value.trim();
-    const itemNumber = document.getElementById('itemNumber').value.trim();
-    const quantity = document.getElementById('quantity').value.trim();
-    const manufactureDate = document.getElementById('manufactureDate').value;
-    const shelfLife = document.getElementById('shelfLife').value.trim();
-    const expiryDate = document.getElementById('expiryDate').value;
-
-    if (!productName || !itemNumber || !quantity) {
-        showMessage('請完整填寫品名、貨號和數量！', 'error');
-        return;
-    }
-
-    const singleItem = [{ 
-        productName, 
-        itemNumber, 
-        quantity,
-        manufactureDate: manufactureDate || '無效期',
-        shelfLife: shelfLife || '無效期',
-        expiryDate: expiryDate || '無效期'
-    }];
-    generateLabels(singleItem);
-}
-
 function generateAllLabels() {
     if (batchData.length === 0) {
         showMessage('沒有資料可產生！', 'error');
@@ -509,7 +533,6 @@ function generateLabels(items) {
 
     showMessage(`已產生 ${items.length} 張箱嘜`, 'success');
 }
-
 
 function printAllLabels() {
     if (batchData.length === 0) {
@@ -662,10 +685,10 @@ function handleFileUpload(event) {
             const worksheet = workbook.Sheets[firstSheetName];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
             
-            // 轉換為CSV格式
+            // 轉換為CSV格式，保留標題行
             const csvData = jsonData.map(row => row.join(',')).join('\n');
             document.getElementById('batchData').value = csvData;
-            showMessage('檔案上傳成功，請點擊「解析資料」', 'success');
+            showMessage('檔案上傳成功，已自動跳過標題行，請點擊「解析資料」', 'success');
         } catch (error) {
             showMessage('檔案解析失敗：' + error.message, 'error');
         }
@@ -724,6 +747,10 @@ function downloadAllAsPDF() {
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         
+        // 使用第一個品項的品名作為檔案名稱
+        const firstProductName = batchData[0].productName;
+        const fileName = `${firstProductName}_箱嘜標籤.pdf`;
+        
         let completed = 0;
         let currentPage = 0;
         
@@ -749,7 +776,7 @@ function downloadAllAsPDF() {
                 
                 completed++;
                 if (completed === labels.length) {
-                    pdf.save('箱嘜標籤.pdf');
+                    pdf.save(fileName);
                     showMessage(`已下載 ${completed} 張箱嘜PDF`, 'success');
                 }
             }).catch(error => {
@@ -776,3 +803,5 @@ function showMessage(message, type) {
 
 </body>
 </html>
+
+
