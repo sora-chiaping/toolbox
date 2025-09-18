@@ -221,7 +221,7 @@
             <div class="form-group">
                 <label for="itemNumber">貨號：</label>
                 <input type="text" id="itemNumber" placeholder="例如：TWS-PRO-123" oninput="validateItemNumber(this)">
-                <small style="color: #666; font-size: 12px;">[不可包含底線(_)或空格]</small>
+                <small style="color: #666; font-size: 12px;">[不可包含底線(_)或空格，全形半形都不行]</small>
             </div>
             
             <div class="form-group">
@@ -265,7 +265,11 @@
                 <strong>使用說明：</strong><br>
                 1. 點擊「下載範例檔案」下載範本<br>
                 2. 填寫範本後上傳，或直接在此輸入資料<br>
-                3. 手動輸入格式：品名,貨號,數量,製造日期,保存年限,有效日期<br>
+                3. <strong>智能解析：</strong>系統會自動識別欄位名稱，支援多種寫法：<br>
+                • 品名：品名、商品名稱、中文名稱、產品名稱等<br>
+                • 貨號：貨號、國際條碼、SKU碼、條碼、編號等<br>
+                • 數量：數量、箱入數、入數、件數等<br>
+                4. 手動輸入格式：品名,貨號,數量,製造日期,保存年限,有效日期<br>
                 日期格式：YYYY-MM-DD 或留空<br>
                 例如：<br>
                 藍牙耳機,TWS-PRO-123,100,2024-01-01,2年,2026-01-01<br>
@@ -275,13 +279,15 @@
             
             <div class="form-group">
                 <label for="batchData">批量資料：</label>
-                <textarea id="batchData" placeholder="請輸入批量資料，每行一筆，格式：品名,貨號,數量,製造日期,保存年限,有效日期"></textarea>
+                <textarea id="batchData" placeholder="請輸入批量資料，每行一筆，格式：品名,貨號,數量,製造日期,保存年限,有效日期（第一行標題會自動隱藏）"></textarea>
             </div>
             
             <div class="btn-group">
-                <button onclick="parseBatchData()">解析資料</button>
+                <button onclick="parseBatchData()">批次產出</button>
                 <button onclick="clearBatch()">清空批量</button>
             </div>
+            
+            <div id="batchErrorMsg" style="margin-top: 10px;"></div>
         </div>
     </div>
 
@@ -317,12 +323,14 @@ document.addEventListener('DOMContentLoaded', function() {
 // 貨號驗證函數
 function validateItemNumber(input) {
     const value = input.value;
-    const hasInvalidChars = value.includes('_') || value.includes(' ');
+    // 檢查全形和半形的底線及空白
+    const invalidChars = ['_', ' ', '＿', '　']; // 半形底線、半形空格、全形底線、全形空格
+    const hasInvalidChars = invalidChars.some(char => value.includes(char));
     
     if (hasInvalidChars) {
         input.style.borderColor = '#ff0000';
         input.style.backgroundColor = '#ffe6e6';
-        showMessage('貨號不可包含底線(_)或空格！', 'error');
+        showMessage('貨號不可包含底線(_)或空格（全形半形都不行）！', 'error');
     } else {
         input.style.borderColor = '#ddd';
         input.style.backgroundColor = '#fff';
@@ -342,9 +350,10 @@ function addToBatch() {
         return;
     }
 
-    // 檢查貨號格式
-    if (itemNumber.includes('_') || itemNumber.includes(' ')) {
-        showMessage('貨號不可包含底線(_)或空格！', 'error');
+    // 檢查貨號格式（全形和半形）
+    const invalidChars = ['_', ' ', '＿', '　']; // 半形底線、半形空格、全形底線、全形空格
+    if (invalidChars.some(char => itemNumber.includes(char))) {
+        showMessage('貨號不可包含底線(_)或空格（全形半形都不行）！', 'error');
         return;
     }
 
@@ -372,12 +381,12 @@ function parseBatchData() {
         return;
     }
 
-    const lines = batchText.split('\n');
+    const batchLines = batchText.split('\n');
     const newItems = [];
     let errorLines = [];
     let isFirstLine = true;
 
-    lines.forEach((line, index) => {
+    batchLines.forEach((line, index) => {
         const trimmedLine = line.trim();
         if (!trimmedLine) return;
 
@@ -399,9 +408,10 @@ function parseBatchData() {
             return;
         }
 
-        // 檢查貨號格式
-        if (itemNumber.includes('_') || itemNumber.includes(' ')) {
-            errorLines.push(`第${index + 1}行貨號格式錯誤（不可包含底線或空格）：${itemNumber}`);
+        // 檢查貨號格式（全形和半形）
+        const invalidChars = ['_', ' ', '＿', '　']; // 半形底線、半形空格、全形底線、全形空格
+        if (invalidChars.some(char => itemNumber.includes(char))) {
+            errorLines.push(`第${index + 1}行貨號格式錯誤（不可包含底線或空格，全形半形都不行）：${itemNumber}`);
             return;
         }
 
@@ -416,14 +426,25 @@ function parseBatchData() {
     });
 
     if (errorLines.length > 0) {
-        showMessage('解析錯誤：\n' + errorLines.join('\n'), 'error');
+        showBatchError('解析錯誤：\n' + errorLines.join('\n'));
         return;
     }
 
     batchData = batchData.concat(newItems);
     updateBatchList();
-    document.getElementById('batchData').value = '';
-    showMessage(`成功解析 ${newItems.length} 筆資料`, 'success');
+    
+    // 清除批量資料欄位，但保留標題行（如果存在）
+    const currentValue = document.getElementById('batchData').value;
+    const currentLines = currentValue.split('\n');
+    if (currentLines.length > 1 && currentLines[0].includes('品名')) {
+        // 如果第一行是標題行，保留它
+        document.getElementById('batchData').value = currentLines[0];
+    } else {
+        // 否則清空
+        document.getElementById('batchData').value = '';
+    }
+    
+    showBatchError(`成功解析 ${newItems.length} 筆資料`, 'success');
 }
 
 function updateBatchList() {
@@ -685,10 +706,11 @@ function handleFileUpload(event) {
             const worksheet = workbook.Sheets[firstSheetName];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
             
-            // 轉換為CSV格式，保留標題行
-            const csvData = jsonData.map(row => row.join(',')).join('\n');
+            // 智能解析欄位並轉換為標準格式
+            const processedData = smartParseData(jsonData);
+            const csvData = processedData.map(row => row.join(',')).join('\n');
             document.getElementById('batchData').value = csvData;
-            showMessage('檔案上傳成功，已自動跳過標題行，請點擊「解析資料」', 'success');
+            showMessage('檔案上傳成功，已自動識別欄位並跳過標題行，請點擊「解析資料」', 'success');
         } catch (error) {
             showMessage('檔案解析失敗：' + error.message, 'error');
         }
@@ -699,6 +721,68 @@ function handleFileUpload(event) {
     } else {
         reader.readAsBinaryString(file);
     }
+}
+
+// 智能解析資料函數
+function smartParseData(data) {
+    if (data.length < 2) return data;
+    
+    const headerRow = data[0];
+    const dataRows = data.slice(1); // 跳過標題行
+    
+    // 定義欄位映射規則
+    const fieldMappings = {
+        productName: ['品名', '商品名稱', '中文名稱', '產品名稱', '商品', '名稱', 'product', 'name', '商品名'],
+        itemNumber: ['貨號', '國際條碼', 'sku碼', 'sku', '條碼', '編號', '代碼', 'code', 'item', 'number'],
+        quantity: ['數量', '箱入數', '入數', 'qty', 'quantity', '數量', '件數'],
+        manufactureDate: ['製造日期', '生產日期', '製造', '生產', 'manufacture', 'production', 'date'],
+        shelfLife: ['保存年限', '保存期限', '有效期', '保存', 'shelf', 'life', 'expiry'],
+        expiryDate: ['有效日期', '到期日', '過期日', 'expiry', 'expire', 'valid']
+    };
+    
+    // 找到對應的欄位索引
+    const fieldIndexes = {};
+    Object.keys(fieldMappings).forEach(field => {
+        const keywords = fieldMappings[field];
+        for (let i = 0; i < headerRow.length; i++) {
+            const header = headerRow[i].toString().toLowerCase().trim();
+            if (keywords.some(keyword => header.includes(keyword.toLowerCase()))) {
+                fieldIndexes[field] = i;
+                break;
+            }
+        }
+    });
+    
+    // 檢查必要欄位是否存在
+    const requiredFields = ['productName', 'itemNumber', 'quantity'];
+    const missingFields = requiredFields.filter(field => fieldIndexes[field] === undefined);
+    
+    if (missingFields.length > 0) {
+        showMessage(`無法識別必要欄位：${missingFields.join(', ')}。請檢查檔案格式或使用範例檔案。`, 'error');
+        return data; // 返回原始資料
+    }
+    
+    // 重新排列資料為標準格式
+    const standardData = [];
+    dataRows.forEach(row => {
+        if (row.length === 0) return; // 跳過空行
+        
+        const standardRow = [
+            fieldIndexes.productName !== undefined ? (row[fieldIndexes.productName] || '').toString().trim() : '',
+            fieldIndexes.itemNumber !== undefined ? (row[fieldIndexes.itemNumber] || '').toString().trim() : '',
+            fieldIndexes.quantity !== undefined ? (row[fieldIndexes.quantity] || '').toString().trim() : '',
+            fieldIndexes.manufactureDate !== undefined ? (row[fieldIndexes.manufactureDate] || '').toString().trim() : '',
+            fieldIndexes.shelfLife !== undefined ? (row[fieldIndexes.shelfLife] || '').toString().trim() : '',
+            fieldIndexes.expiryDate !== undefined ? (row[fieldIndexes.expiryDate] || '').toString().trim() : ''
+        ];
+        standardData.push(standardRow);
+    });
+    
+    // 添加標準標題行
+    const result = [['品名', '貨號', '數量', '製造日期', '保存年限', '有效日期']];
+    result.push(...standardData);
+    
+    return result;
 }
 
 // 下載範例檔案
@@ -797,6 +881,17 @@ function showMessage(message, type) {
     
     setTimeout(() => {
         statusDiv.innerHTML = '<p style="color: #888;">請輸入資料並點擊相應按鈕</p>';
+    }, 5000);
+}
+
+// 顯示批量錯誤訊息
+function showBatchError(message, type = 'error') {
+    const errorDiv = document.getElementById('batchErrorMsg');
+    const className = type === 'error' ? 'error-message' : 'success-message';
+    errorDiv.innerHTML = `<div class="${className}">${message}</div>`;
+    
+    setTimeout(() => {
+        errorDiv.innerHTML = '';
     }, 5000);
 }
 </script>
