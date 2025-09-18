@@ -1,36 +1,902 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>箱嘜產生器</title>
-  <style>
-    :root { --primary:#2b7cff; --bg:#f6f7fb; }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:ui-sans-serif,system-ui,Segoe UI,Arial;background:var(--bg);color:#1f2937;height:100vh;overflow:hidden}
-    header{padding:16px;text-align:center;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.1)}
-    h1{margin:0;font-size:24px;color:#1f2937}
-    .wrap{height:calc(100vh - 80px);padding:16px}
-    .panel{background:#fff;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.06);overflow:hidden;height:100%}
-    .frame{
-      width:100%; height:calc(100% - 40px); border:0; background:#fff;
-    }
-    .links{margin:0;padding:8px;text-align:center;font-size:13px;background:#f8f9fa;border-top:1px solid #e9ecef}
-    .links a{color:#2563eb;text-decoration:none;margin:0 6px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>箱嘜產生工具 - 批量版 v2.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        // 確保庫載入完成
+        window.addEventListener('load', function() {
+            console.log('所有庫已載入完成');
+            console.log('箱嘜產生工具 v2.0 已載入');
+        });
+        
+        // 強制清除快取
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #555;
+        }
+        .input-section {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .single-input {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #fafafa;
+        }
+        .batch-input {
+            flex: 2;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #fafafa;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea {
+            width: 95%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        textarea {
+            height: 200px;
+            resize: vertical;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .btn-group button {
+            flex: 1;
+            padding: 12px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .btn-group button:hover {
+            background-color: #0056b3;
+        }
+        .btn-group button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result-area {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .labels-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        /* 箱嘜表格的樣式，以10x15cm的比例設定 */
+        .box-label-container {
+            width: 10cm; /* 約378px */
+            height: 15cm; /* 約567px */
+            border: 2px solid #333;
+            padding: 10px;
+            background-color: #fff;
+            display: inline-flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: left;
+            box-sizing: border-box;
+            margin: 10px;
+        }
+        .box-label-container h1 {
+            text-align: center;
+            font-size: 2em;
+            margin: 0 0 10px 0;
+        }
+        .box-label-container table {
+            width: 90%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .box-label-container th, .box-label-container td {
+            border: 1px solid #333;
+            padding: 8px;
+            font-size: 1.1em;
+        }
+        .box-label-container th {
+            background-color: #e2e2e2;
+            width: 30%;
+        }
+        .box-label-container td {
+            width: 70%;
+        }
+        /* 列印樣式 - 10x15cm 橫式 */
+        @media print {
+            body { margin: 0; padding: 0; }
+            .print-label {
+                width: 10cm !important;
+                height: 15cm !important;
+                border: 2px solid #333 !important;
+                padding: 10px !important;
+                background-color: #fff !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                align-items: center !important;
+                text-align: left !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                page-break-after: always !important;
+            }
+            .print-label:last-child {
+                page-break-after: avoid !important;
+            }
+        }
+        .batch-info {
+            background-color: #e8f4fd;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .error-message {
+            color: #ff0000;
+            background-color: #ffe6e6;
+            border: 1px solid #ffcccc;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .success-message {
+            color: #006600;
+            background-color: #e6ffe6;
+            border: 1px solid #ccffcc;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <h1>📦 箱嘜產生器</h1>
-  </header>
 
-  <div class="wrap">
-    <section class="panel">
-      <iframe class="frame" src="boxlabel-v2.html" title="箱嘜產生器"></iframe>
-      <div class="links">
-        直接開新頁：<a href="boxlabel-v2.html" target="_blank" rel="noopener">boxlabel-v2.html</a>
-      </div>
-    </section>
-  </div>
+<div class="container">
+    <h2>箱嘜資訊產生器 - 批量版 v2.0</h2>
+
+    <div class="input-section">
+        <div class="single-input">
+            <div class="section-title">單筆輸入</div>
+            <div class="form-group">
+                <label for="productName">品名：</label>
+                <input type="text" id="productName" placeholder="例如：藍牙耳機">
+            </div>
+            
+            <div class="form-group">
+                <label for="itemNumber">貨號：</label>
+                <input type="text" id="itemNumber" placeholder="例如：TWS-PRO-123" oninput="validateItemNumber(this)">
+                <small style="color: #666; font-size: 12px;">[不可包含底線(_)或空格，全形半形都不行]</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="quantity">數量：</label>
+                <input type="text" id="quantity" placeholder="例如：100">
+            </div>
+            
+            <div class="form-group">
+                <label for="manufactureDate">製造日期：</label>
+                <input type="date" id="manufactureDate">
+                <small style="color: #666; font-size: 12px;">[如未填寫則自動預設無效期]</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="shelfLife">保存年限：</label>
+                <input type="text" id="shelfLife" placeholder="例如：2年">
+                <small style="color: #666; font-size: 12px;">[如未填寫則自動預設無效期]</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="expiryDate">有效日期：</label>
+                <input type="date" id="expiryDate">
+                <small style="color: #666; font-size: 12px;">[如未填寫則自動預設無效期]</small>
+            </div>
+            
+            <div class="btn-group">
+                <button onclick="addToBatch()">加入資料</button>
+            </div>
+        </div>
+
+        <div class="batch-input">
+            <div class="section-title">批量輸入</div>
+            
+            <div class="form-group">
+                <label for="fileInput">匯入檔案 (Excel/CSV)：</label>
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                <button onclick="downloadSampleFile()" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px;">下載範例檔案</button>
+            </div>
+            
+            <div class="batch-info">
+                <strong>使用說明：</strong><br>
+                1. 點擊「下載範例檔案」下載範本<br>
+                2. 填寫範本後上傳，或直接在此輸入資料<br>
+                3. <strong>智能解析：</strong>系統會自動識別欄位名稱，支援多種寫法：<br>
+                • 品名：品名、商品名稱、中文名稱、產品名稱等<br>
+                • 貨號：貨號、國際條碼、SKU碼、條碼、編號等<br>
+                • 數量：數量、箱入數、入數、件數等<br>
+                4. 手動輸入格式：品名,貨號,數量,製造日期,保存年限,有效日期<br>
+                日期格式：YYYY-MM-DD 或留空<br>
+                例如：<br>
+                藍牙耳機,TWS-PRO-123,100,2024-01-01,2年,2026-01-01<br>
+                手機殼,PHONE-CASE-456,50,,,<br>
+                充電線,USB-CABLE-789,200,2024-01-01,,
+            </div>
+            
+            <div class="form-group">
+                <label for="batchData">批量資料：</label>
+                <textarea id="batchData" placeholder="請輸入批量資料，每行一筆，格式：品名,貨號,數量,製造日期,保存年限,有效日期（第一行標題會自動隱藏）"></textarea>
+            </div>
+            
+            <div class="btn-group">
+                <button onclick="parseBatchData()">批次產出</button>
+                <button onclick="clearBatch()">清空批量</button>
+            </div>
+            
+            <div id="batchErrorMsg" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <div id="batchList" style="display: none;">
+        <h3>批量資料列表</h3>
+        <div id="batchItems"></div>
+    </div>
+
+    <div class="btn-group">
+        <button onclick="generateAllLabels()" id="generateAllBtn" disabled>產生所有箱嘜</button>
+        <button onclick="downloadAllAsPDF()" id="downloadAllBtn" disabled>下載PDF</button>
+        <button onclick="printAllLabels()" id="printAllBtn" disabled>列印所有箱嘜</button>
+    </div>
+
+    <div id="labelsContainer" class="labels-container"></div>
+
+    <div class="result-area">
+        <div id="resultStatus">
+            <p style="color: #888;">請輸入資料並點擊相應按鈕</p>
+        </div>
+    </div>
+</div>
+
+<script>
+let batchData = [];
+
+// 檔案上傳事件監聽器
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', handleFileUpload);
+});
+
+// 貨號驗證函數
+function validateItemNumber(input) {
+    const value = input.value;
+    // 檢查全形和半形的底線及空白
+    const invalidChars = ['_', ' ', '＿', '　']; // 半形底線、半形空格、全形底線、全形空格
+    const hasInvalidChars = invalidChars.some(char => value.includes(char));
+    
+    if (hasInvalidChars) {
+        input.style.borderColor = '#ff0000';
+        input.style.backgroundColor = '#ffe6e6';
+        showMessage('貨號不可包含底線(_)或空格（全形半形都不行）！', 'error');
+    } else {
+        input.style.borderColor = '#ddd';
+        input.style.backgroundColor = '#fff';
+    }
+}
+
+function addToBatch() {
+    const productName = document.getElementById('productName').value.trim();
+    const itemNumber = document.getElementById('itemNumber').value.trim();
+    const quantity = document.getElementById('quantity').value.trim();
+    const manufactureDate = document.getElementById('manufactureDate').value;
+    const shelfLife = document.getElementById('shelfLife').value.trim();
+    const expiryDate = document.getElementById('expiryDate').value;
+
+    if (!productName || !itemNumber || !quantity) {
+        showMessage('請完整填寫品名、貨號和數量！', 'error');
+        return;
+    }
+
+    // 檢查貨號格式（全形和半形）
+    const invalidChars = ['_', ' ', '＿', '　']; // 半形底線、半形空格、全形底線、全形空格
+    if (invalidChars.some(char => itemNumber.includes(char))) {
+        showMessage('貨號不可包含底線(_)或空格（全形半形都不行）！', 'error');
+        return;
+    }
+
+    const newItem = { 
+        productName, 
+        itemNumber, 
+        quantity, 
+        manufactureDate: manufactureDate || '無效期',
+        shelfLife: shelfLife || '無效期',
+        expiryDate: expiryDate || '無效期'
+    };
+    batchData.push(newItem);
+    updateBatchList();
+    clearSingleInput();
+    
+    // 立即產生單張箱嘜
+    generateLabels([newItem]);
+    showMessage(`已加入並產生箱嘜：${productName}`, 'success');
+}
+
+function parseBatchData() {
+    const batchText = document.getElementById('batchData').value.trim();
+    if (!batchText) {
+        showMessage('請輸入批量資料！', 'error');
+        return;
+    }
+
+    const batchLines = batchText.split('\n');
+    const newItems = [];
+    let errorLines = [];
+    let isFirstLine = true;
+
+    batchLines.forEach((line, index) => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return;
+
+        // 跳過第一列標題行
+        if (isFirstLine) {
+            isFirstLine = false;
+            return;
+        }
+
+        const parts = trimmedLine.split(',');
+        if (parts.length < 3) {
+            errorLines.push(`第${index + 1}行格式錯誤：${trimmedLine}`);
+            return;
+        }
+
+        const [productName, itemNumber, quantity, manufactureDate, shelfLife, expiryDate] = parts.map(part => part.trim());
+        if (!productName || !itemNumber || !quantity) {
+            errorLines.push(`第${index + 1}行資料不完整：${trimmedLine}`);
+            return;
+        }
+
+        // 檢查貨號格式（全形和半形）
+        const invalidChars = ['_', ' ', '＿', '　']; // 半形底線、半形空格、全形底線、全形空格
+        if (invalidChars.some(char => itemNumber.includes(char))) {
+            errorLines.push(`第${index + 1}行貨號格式錯誤（不可包含底線或空格，全形半形都不行）：${itemNumber}`);
+            return;
+        }
+
+        newItems.push({ 
+            productName, 
+            itemNumber, 
+            quantity,
+            manufactureDate: manufactureDate || '無效期',
+            shelfLife: shelfLife || '無效期',
+            expiryDate: expiryDate || '無效期'
+        });
+    });
+
+    if (errorLines.length > 0) {
+        showBatchError('解析錯誤：\n' + errorLines.join('\n'));
+        return;
+    }
+
+    batchData = batchData.concat(newItems);
+    updateBatchList();
+    
+    // 清除批量資料欄位，但保留標題行（如果存在）
+    const currentValue = document.getElementById('batchData').value;
+    const currentLines = currentValue.split('\n');
+    if (currentLines.length > 1 && currentLines[0].includes('品名')) {
+        // 如果第一行是標題行，保留它
+        document.getElementById('batchData').value = currentLines[0];
+    } else {
+        // 否則清空
+        document.getElementById('batchData').value = '';
+    }
+    
+    showBatchError(`成功解析 ${newItems.length} 筆資料`, 'success');
+}
+
+function updateBatchList() {
+    const batchList = document.getElementById('batchList');
+    const batchItems = document.getElementById('batchItems');
+    
+    if (batchData.length === 0) {
+        batchList.style.display = 'none';
+        updateButtonStates();
+        return;
+    }
+
+    batchList.style.display = 'block';
+    batchItems.innerHTML = '';
+
+    batchData.forEach((item, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; border: 1px solid #ddd; margin: 5px 0; border-radius: 4px; background-color: #f9f9f9;';
+        itemDiv.innerHTML = `
+            <span>${index + 1}. ${item.productName} (${item.itemNumber}) - 數量: ${item.quantity}</span>
+            <button onclick="removeFromBatch(${index})" style="background-color: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer;">刪除</button>
+        `;
+        batchItems.appendChild(itemDiv);
+    });
+
+    updateButtonStates();
+}
+
+function removeFromBatch(index) {
+    batchData.splice(index, 1);
+    updateBatchList();
+    showMessage('已刪除該筆資料', 'success');
+}
+
+function clearBatch() {
+    batchData = [];
+    updateBatchList();
+    document.getElementById('batchData').value = '';
+    showMessage('已清空批量資料', 'success');
+}
+
+function clearSingleInput() {
+    document.getElementById('productName').value = '';
+    document.getElementById('itemNumber').value = '';
+    document.getElementById('quantity').value = '';
+    document.getElementById('manufactureDate').value = '';
+    document.getElementById('shelfLife').value = '';
+    document.getElementById('expiryDate').value = '';
+}
+
+function updateButtonStates() {
+    const hasData = batchData.length > 0;
+    document.getElementById('generateAllBtn').disabled = !hasData;
+    document.getElementById('downloadAllBtn').disabled = !hasData;
+    document.getElementById('printAllBtn').disabled = !hasData;
+}
+
+function generateAllLabels() {
+    if (batchData.length === 0) {
+        showMessage('沒有資料可產生！', 'error');
+        return;
+    }
+    generateLabels(batchData);
+}
+
+function generateLabels(items) {
+    const container = document.getElementById('labelsContainer');
+    container.innerHTML = '';
+
+    items.forEach((item, index) => {
+        const labelDiv = document.createElement('div');
+        labelDiv.id = `label-${index}`;
+        labelDiv.className = 'box-label-container';
+        labelDiv.innerHTML = `
+            <h1>箱嘜</h1>
+            <table>
+                <tbody>
+                    <tr>
+                        <th>貨號</th>
+                        <td>${item.itemNumber}</td>
+                    </tr>
+                    <tr>
+                        <th>品名</th>
+                        <td>${item.productName}</td>
+                    </tr>
+                    <tr>
+                        <th>箱入數</th>
+                        <td>${item.quantity}</td>
+                    </tr>
+                    <tr>
+                        <th>製造日期</th>
+                        <td>${item.manufactureDate || '無效期'}</td>
+                    </tr>
+                    <tr>
+                        <th>保存年限</th>
+                        <td>${item.shelfLife || '無效期'}</td>
+                    </tr>
+                    <tr>
+                        <th>有效日期</th>
+                        <td>${item.expiryDate || '無效期'}</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+        container.appendChild(labelDiv);
+    });
+
+    showMessage(`已產生 ${items.length} 張箱嘜`, 'success');
+}
+
+function printAllLabels() {
+    if (batchData.length === 0) {
+        showMessage('沒有資料可列印！', 'error');
+        return;
+    }
+
+    const container = document.getElementById('labelsContainer');
+    const labels = container.querySelectorAll('.box-label-container');
+    
+    if (labels.length === 0) {
+        showMessage('請先產生箱嘜！', 'error');
+        return;
+    }
+
+    showMessage('正在準備列印，請稍候...', 'success');
+    
+    let completed = 0;
+    let allImages = [];
+    
+    labels.forEach((label, index) => {
+        html2canvas(label, { 
+            scale: 2,
+            backgroundColor: '#ffffff'
+        }).then(canvas => {
+            const imageURL = canvas.toDataURL('image/png');
+            allImages.push(imageURL);
+            
+            completed++;
+            if (completed === labels.length) {
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>列印箱嘜</title>
+                            <style>
+                                @page {
+                                    size: 10cm 15cm;
+                                    margin: 0;
+                                }
+                                body {
+                                    margin: 0;
+                                    padding: 0;
+                                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                                }
+                                .print-label {
+                                    width: 10cm !important;
+                                    height: 15cm !important;
+                                    border: 2px solid #333 !important;
+                                    padding: 10px !important;
+                                    background-color: #fff !important;
+                                    display: flex !important;
+                                    flex-direction: column !important;
+                                    justify-content: center !important;
+                                    align-items: center !important;
+                                    text-align: left !important;
+                                    box-sizing: border-box !important;
+                                    margin: 0 !important;
+                                    page-break-after: always !important;
+                                }
+                                .print-label:last-child {
+                                    page-break-after: avoid !important;
+                                }
+                                .print-label h1 {
+                                    text-align: center;
+                                    font-size: 2em;
+                                    margin: 0 0 10px 0;
+                                }
+                                .print-label table {
+                                    width: 90%;
+                                    border-collapse: collapse;
+                                    font-size: 14px;
+                                }
+                                .print-label th, .print-label td {
+                                    border: 1px solid #333;
+                                    padding: 8px;
+                                    font-size: 1.1em;
+                                }
+                                .print-label th {
+                                    background-color: #e2e2e2;
+                                    width: 30%;
+                                }
+                                .print-label td {
+                                    width: 70%;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                `);
+                
+                // 重新生成每個標籤的HTML結構用於列印
+                batchData.forEach((item, index) => {
+                    printWindow.document.write(`
+                        <div class="print-label">
+                            <h1>箱嘜</h1>
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        <th>貨號</th>
+                                        <td>${item.itemNumber}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>品名</th>
+                                        <td>${item.productName}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>箱入數</th>
+                                        <td>${item.quantity}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>製造日期</th>
+                                        <td>${item.manufactureDate || '無效期'}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>保存年限</th>
+                                        <td>${item.shelfLife || '無效期'}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>有效日期</th>
+                                        <td>${item.expiryDate || '無效期'}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `);
+                });
+                
+                printWindow.document.write('</body></html>');
+                printWindow.document.close();
+                printWindow.onload = () => {
+                    printWindow.print();
+                    printWindow.close();
+                };
+            }
+        });
+    });
+}
+
+// 檔案上傳處理
+function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = e.target.result;
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            
+            // 智能解析欄位並轉換為標準格式
+            const processedData = smartParseData(jsonData);
+            const csvData = processedData.map(row => row.join(',')).join('\n');
+            document.getElementById('batchData').value = csvData;
+            showMessage('檔案上傳成功，已自動識別欄位並跳過標題行，請點擊「解析資料」', 'success');
+        } catch (error) {
+            showMessage('檔案解析失敗：' + error.message, 'error');
+        }
+    };
+    
+    if (file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+    } else {
+        reader.readAsBinaryString(file);
+    }
+}
+
+// 智能解析資料函數
+function smartParseData(data) {
+    if (data.length < 2) return data;
+    
+    const headerRow = data[0];
+    const dataRows = data.slice(1); // 跳過標題行
+    
+    // 定義欄位映射規則
+    const fieldMappings = {
+        productName: ['品名', '商品名稱', '中文名稱', '產品名稱', '商品', '名稱', 'product', 'name', '商品名'],
+        itemNumber: ['貨號', '國際條碼', 'sku碼', 'sku', '條碼', '編號', '代碼', 'code', 'item', 'number'],
+        quantity: ['數量', '箱入數', '入數', 'qty', 'quantity', '數量', '件數'],
+        manufactureDate: ['製造日期', '生產日期', '製造', '生產', 'manufacture', 'production', 'date'],
+        shelfLife: ['保存年限', '保存期限', '有效期', '保存', 'shelf', 'life', 'expiry'],
+        expiryDate: ['有效日期', '到期日', '過期日', 'expiry', 'expire', 'valid']
+    };
+    
+    // 找到對應的欄位索引
+    const fieldIndexes = {};
+    Object.keys(fieldMappings).forEach(field => {
+        const keywords = fieldMappings[field];
+        for (let i = 0; i < headerRow.length; i++) {
+            const header = headerRow[i].toString().toLowerCase().trim();
+            if (keywords.some(keyword => header.includes(keyword.toLowerCase()))) {
+                fieldIndexes[field] = i;
+                break;
+            }
+        }
+    });
+    
+    // 檢查必要欄位是否存在
+    const requiredFields = ['productName', 'itemNumber', 'quantity'];
+    const missingFields = requiredFields.filter(field => fieldIndexes[field] === undefined);
+    
+    if (missingFields.length > 0) {
+        showMessage(`無法識別必要欄位：${missingFields.join(', ')}。請檢查檔案格式或使用範例檔案。`, 'error');
+        return data; // 返回原始資料
+    }
+    
+    // 重新排列資料為標準格式
+    const standardData = [];
+    dataRows.forEach(row => {
+        if (row.length === 0) return; // 跳過空行
+        
+        const standardRow = [
+            fieldIndexes.productName !== undefined ? (row[fieldIndexes.productName] || '').toString().trim() : '',
+            fieldIndexes.itemNumber !== undefined ? (row[fieldIndexes.itemNumber] || '').toString().trim() : '',
+            fieldIndexes.quantity !== undefined ? (row[fieldIndexes.quantity] || '').toString().trim() : '',
+            fieldIndexes.manufactureDate !== undefined ? (row[fieldIndexes.manufactureDate] || '').toString().trim() : '',
+            fieldIndexes.shelfLife !== undefined ? (row[fieldIndexes.shelfLife] || '').toString().trim() : '',
+            fieldIndexes.expiryDate !== undefined ? (row[fieldIndexes.expiryDate] || '').toString().trim() : ''
+        ];
+        standardData.push(standardRow);
+    });
+    
+    // 添加標準標題行
+    const result = [['品名', '貨號', '數量', '製造日期', '保存年限', '有效日期']];
+    result.push(...standardData);
+    
+    return result;
+}
+
+// 下載範例檔案
+function downloadSampleFile() {
+    const sampleData = [
+        ['品名', '貨號', '數量', '製造日期', '保存年限', '有效日期'],
+        ['藍牙耳機', 'TWS-PRO-123', '100', '2024-01-01', '2年', '2026-01-01'],
+        ['手機殼', 'PHONE-CASE-456', '50', '', '', ''],
+        ['充電線', 'USB-CABLE-789', '200', '2024-01-01', '', '']
+    ];
+    
+    const ws = XLSX.utils.aoa_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '箱嘜資料');
+    
+    XLSX.writeFile(wb, '箱嘜範例檔案.xlsx');
+    showMessage('範例檔案下載完成', 'success');
+}
+
+// 下載所有箱嘜為PDF
+function downloadAllAsPDF() {
+    if (batchData.length === 0) {
+        showMessage('沒有資料可下載！', 'error');
+        return;
+    }
+
+    const container = document.getElementById('labelsContainer');
+    const labels = container.querySelectorAll('.box-label-container');
+    
+    if (labels.length === 0) {
+        showMessage('請先產生箱嘜！', 'error');
+        return;
+    }
+
+    // 檢查 jsPDF 是否可用
+    if (typeof window.jspdf === 'undefined') {
+        showMessage('PDF 庫載入失敗，請重新整理頁面後再試', 'error');
+        return;
+    }
+
+    showMessage('正在生成PDF，請稍候...', 'success');
+    
+    try {
+        const jsPDF = window.jspdf.jsPDF;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        
+        // 使用第一個品項的品名作為檔案名稱
+        const firstProductName = batchData[0].productName;
+        const fileName = `${firstProductName}_箱嘜標籤.pdf`;
+        
+        let completed = 0;
+        let currentPage = 0;
+        
+        labels.forEach((label, index) => {
+            html2canvas(label, { 
+                scale: 2,
+                backgroundColor: '#ffffff'
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 100; // 10cm in mm
+                const imgHeight = 150; // 15cm in mm
+                
+                // 計算位置（每頁放一個標籤）
+                const x = (pageWidth - imgWidth) / 2;
+                const y = (pageHeight - imgHeight) / 2;
+                
+                if (currentPage > 0) {
+                    pdf.addPage();
+                }
+                
+                pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+                currentPage++;
+                
+                completed++;
+                if (completed === labels.length) {
+                    pdf.save(fileName);
+                    showMessage(`已下載 ${completed} 張箱嘜PDF`, 'success');
+                }
+            }).catch(error => {
+                console.error('生成圖片失敗:', error);
+                showMessage('生成PDF時發生錯誤，請重試', 'error');
+            });
+        });
+    } catch (error) {
+        console.error('PDF 生成失敗:', error);
+        showMessage('PDF 生成失敗，請重試', 'error');
+    }
+}
+
+function showMessage(message, type) {
+    const statusDiv = document.getElementById('resultStatus');
+    const className = type === 'error' ? 'error-message' : 'success-message';
+    statusDiv.innerHTML = `<div class="${className}">${message}</div>`;
+    
+    setTimeout(() => {
+        statusDiv.innerHTML = '<p style="color: #888;">請輸入資料並點擊相應按鈕</p>';
+    }, 5000);
+}
+
+// 顯示批量錯誤訊息
+function showBatchError(message, type = 'error') {
+    const errorDiv = document.getElementById('batchErrorMsg');
+    const className = type === 'error' ? 'error-message' : 'success-message';
+    errorDiv.innerHTML = `<div class="${className}">${message}</div>`;
+    
+    setTimeout(() => {
+        errorDiv.innerHTML = '';
+    }, 5000);
+}
+</script>
+
 </body>
 </html>
+
+
